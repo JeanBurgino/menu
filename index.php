@@ -360,6 +360,66 @@ if (file_exists('bring-config.php')) {
         </div>
     </div>
 
+    <!-- Modal: Bring Artikelliste -->
+    <div id="bringArticleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col slide-up">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Artikel für Bring! Liste</h2>
+
+            <!-- Artikelliste -->
+            <div class="flex-1 overflow-y-auto mb-4">
+                <div class="space-y-2" id="bringArticleList">
+                    <!-- Wird dynamisch gefüllt -->
+                </div>
+            </div>
+
+            <!-- Neuen Artikel hinzufügen -->
+            <div class="bg-green-50 p-4 rounded-lg mb-4">
+                <h3 class="font-semibold text-gray-700 mb-2">Neuer Artikel</h3>
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        id="newArticleName"
+                        placeholder="Artikelname"
+                        class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                    <input
+                        type="text"
+                        id="newArticleSpec"
+                        placeholder="Menge/Spezifikation"
+                        class="w-48 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                    <button
+                        onclick="addBringArticle()"
+                        class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3">
+                <button
+                    onclick="sendToBring()"
+                    class="flex-1 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    An Bring! senden
+                </button>
+                <button
+                    onclick="closeBringModal()"
+                    class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                >
+                    Schliessen
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Benutzer bearbeiten -->
     <div id="editUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-30">
         <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md slide-up max-h-[90vh] overflow-y-auto">
@@ -439,6 +499,7 @@ if (file_exists('bring-config.php')) {
         let editingUser = null;
         let editingRecipe = null;
         let tempProfilePicture = null; // Temporär während des Bearbeitens
+        let bringArticles = []; // Liste der Artikel für Bring! Export
 
         const weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
         const mealTypes = ['Mittag', 'Abendessen'];
@@ -1022,6 +1083,19 @@ if (file_exists('bring-config.php')) {
             }
         });
 
+        // Enter-Taste im Bring Modal für neuen Artikel
+        document.getElementById('newArticleName')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addBringArticle();
+            }
+        });
+
+        document.getElementById('newArticleSpec')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addBringArticle();
+            }
+        });
+
         // ==================== BENUTZERVERWALTUNG ====================
 
         function showUserManagement() {
@@ -1553,10 +1627,10 @@ if (file_exists('bring-config.php')) {
 
         // ==================== BRING! EXPORT ====================
 
-        async function exportToBring() {
+        function exportToBring() {
             // Sammle alle Zutaten aus dem aktuellen Wochenplan
             const shoppingList = {};
-            
+
             Object.entries(weekPlan).forEach(([day, meals]) => {
                 Object.entries(meals).forEach(([mealType, mealData]) => {
                     if (mealData && mealData.recipe_id) {
@@ -1588,36 +1662,138 @@ if (file_exists('bring-config.php')) {
                 return;
             }
 
-            const listName = BRING_CONFIG.list_name || 'OBI';
-            const itemCount = Object.keys(shoppingList).length;
-            
-            // Formatiere Items für API
-            const items = Object.values(shoppingList).map(item => {
+            // Konvertiere zu Array und öffne Modal
+            bringArticles = Object.values(shoppingList).map((item, index) => {
                 let specification = '';
-                
+
                 // Füge Anzahl hinzu
                 if (item.count > 1) {
                     specification = `${item.count}x`;
                 }
-                
+
                 // Füge Spezifikationen hinzu
                 if (item.specifications.size > 0) {
                     const specs = Array.from(item.specifications).join(', ');
                     specification = specification ? `${specification} (${specs})` : specs;
                 }
-                
+
                 return {
+                    id: index,
                     name: item.name,
                     specification: specification
                 };
             });
 
+            displayBringArticles();
+            document.getElementById('bringArticleModal').classList.remove('hidden');
+        }
+
+        function displayBringArticles() {
+            const list = document.getElementById('bringArticleList');
+            list.innerHTML = '';
+
+            if (bringArticles.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-500 py-8">Keine Artikel vorhanden</div>';
+                return;
+            }
+
+            bringArticles.forEach((article, index) => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 p-3 rounded-lg flex items-center gap-3';
+
+                div.innerHTML = `
+                    <div class="flex-1 grid grid-cols-2 gap-2">
+                        <input
+                            type="text"
+                            value="${article.name}"
+                            onchange="updateBringArticle(${index}, 'name', this.value)"
+                            class="px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                            placeholder="Artikelname"
+                        />
+                        <input
+                            type="text"
+                            value="${article.specification || ''}"
+                            onchange="updateBringArticle(${index}, 'specification', this.value)"
+                            class="px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                            placeholder="Menge/Spezifikation"
+                        />
+                    </div>
+                    <button
+                        onclick="deleteBringArticle(${index})"
+                        class="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                        title="Artikel löschen"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                `;
+
+                list.appendChild(div);
+            });
+        }
+
+        function updateBringArticle(index, field, value) {
+            if (index >= 0 && index < bringArticles.length) {
+                bringArticles[index][field] = value.trim();
+            }
+        }
+
+        function deleteBringArticle(index) {
+            if (confirm('Möchten Sie diesen Artikel wirklich entfernen?')) {
+                bringArticles.splice(index, 1);
+                displayBringArticles();
+            }
+        }
+
+        function addBringArticle() {
+            const name = document.getElementById('newArticleName').value.trim();
+            const specification = document.getElementById('newArticleSpec').value.trim();
+
+            if (!name) {
+                alert('Bitte geben Sie einen Artikelnamen ein');
+                return;
+            }
+
+            bringArticles.push({
+                id: bringArticles.length,
+                name: name,
+                specification: specification
+            });
+
+            document.getElementById('newArticleName').value = '';
+            document.getElementById('newArticleSpec').value = '';
+            displayBringArticles();
+        }
+
+        function closeBringModal() {
+            document.getElementById('bringArticleModal').classList.add('hidden');
+            document.getElementById('newArticleName').value = '';
+            document.getElementById('newArticleSpec').value = '';
+        }
+
+        async function sendToBring() {
+            if (bringArticles.length === 0) {
+                alert('Keine Artikel zum Senden vorhanden!');
+                return;
+            }
+
+            const listName = BRING_CONFIG.list_name || 'OBI';
+            const itemCount = bringArticles.length;
+
+            // Verwende bringArticles direkt
+            const items = bringArticles.map(article => ({
+                name: article.name,
+                specification: article.specification || ''
+            }));
+
             // Versuche zuerst direkten API-Export
             try {
                 const result = await apiCall('/export_to_bring_direct', 'POST', { items });
-                
+
                 if (result && result.success) {
                     alert(`✅ ${itemCount} Artikel erfolgreich zu Bring! Liste "${listName}" hinzugefügt!`);
+                    closeBringModal();
                     return;
                 }
             } catch (error) {
@@ -1626,6 +1802,7 @@ if (file_exists('bring-config.php')) {
 
             // Fallback: Deeplink-Methode
             await exportToBringDeeplink(items, listName, itemCount);
+            closeBringModal();
         }
         
         async function exportToBringDeeplink(items, listName, itemCount) {
