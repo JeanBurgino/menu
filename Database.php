@@ -63,8 +63,9 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            $this->logError('Query failed: ' . $e->getMessage() . ' | SQL: ' . $sql);
-            throw new Exception('Datenbankabfrage fehlgeschlagen', 500);
+            $errorMsg = 'Query failed: ' . $e->getMessage() . ' | SQL: ' . $sql . ' | Params: ' . json_encode($params);
+            $this->logError($errorMsg);
+            throw new Exception('Datenbankabfrage fehlgeschlagen: ' . $e->getMessage(), 500);
         }
     }
     
