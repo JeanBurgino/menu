@@ -192,10 +192,10 @@ class MenuPlannerAPI {
         $recipes = $this->db->fetchAll("
             SELECT r.id, r.title, r.ingredients, r.is_lunch, r.is_dinner, r.is_weekend,
                    r.created_by, r.created_at, r.last_modified_by, r.last_modified_at,
-                   u1.name as creator_name, u1.profile_image as creator_image,
-                   u2.name as modifier_name, u2.profile_image as modifier_image
-            FROM recipes r 
-            LEFT JOIN users u1 ON r.created_by = u1.id 
+                   u1.name as creator_name, u1.profile_picture as creator_picture,
+                   u2.name as modifier_name, u2.profile_picture as modifier_picture
+            FROM recipes r
+            LEFT JOIN users u1 ON r.created_by = u1.id
             LEFT JOIN users u2 ON r.last_modified_by = u2.id
             ORDER BY r.title
         ");

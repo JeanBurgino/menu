@@ -447,13 +447,13 @@ if (file_exists('bring-config.php')) {
                                 onclick="document.getElementById('editUserPictureFile').click()"
                                 class="w-full py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
                             >
-                                📷 Bild hochladen
+                                Bild hochladen
                             </button>
                             <button
                                 onclick="removeProfilePicture()"
                                 class="w-full mt-2 py-2 px-4 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
                             >
-                                🗑️ Bild entfernen
+                                Bild entfernen
                             </button>
                         </div>
                     </div>
@@ -580,10 +580,10 @@ if (file_exists('bring-config.php')) {
                 const button = document.createElement('button');
                 button.className = 'w-full py-4 px-6 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-105 shadow-lg flex items-center gap-3 justify-center';
                 
-                // Zeige Profilbild oder Emoji
-                const profileDisplay = user.profile_picture 
+                // Zeige Profilbild
+                const profileDisplay = user.profile_picture
                     ? `<img src="${user.profile_picture}" alt="${user.name}" class="w-12 h-12 rounded-full object-cover border-2 border-white" />`
-                    : `<span class="text-3xl">${user.profile_image || '👤'}</span>`;
+                    : `<div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-xl border-2 border-white">${user.name.charAt(0).toUpperCase()}</div>`;
                 
                 button.innerHTML = `
                     ${profileDisplay}
@@ -739,11 +739,7 @@ if (file_exists('bring-config.php')) {
                                         <span class="text-sm font-medium text-gray-800">${recipeTitle}</span>
                                         ${modifiedBy ? `
                                         <div class="flex items-center gap-1 text-xs text-gray-500">
-                                            ${modifiedByPicture
-                                                ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />`
-                                                : modifiedByImage
-                                                    ? `<span class="text-base">${modifiedByImage}</span>`
-                                                    : ''}
+                                            ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
                                             <span>${modifiedBy}</span>
                                         </div>
                                         ` : ''}
@@ -1120,7 +1116,10 @@ if (file_exists('bring-config.php')) {
                 
                 div.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <span class="text-3xl">${user.profile_image || '👤'}</span>
+                        ${user.profile_picture
+                            ? `<img src="${user.profile_picture}" alt="${user.name}" class="w-10 h-10 rounded-full object-cover border border-gray-300" />`
+                            : `<div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-lg border border-gray-300">${user.name.charAt(0).toUpperCase()}</div>`
+                        }
                         <div>
                             <div class="font-semibold text-gray-800">${user.name}</div>
                             ${user.is_admin ? '<span class="text-xs text-blue-600 font-medium">Admin</span>' : ''}
@@ -1204,12 +1203,14 @@ if (file_exists('bring-config.php')) {
             tempProfilePicture = null;
         }
 
-        function updateProfilePicturePreview(picture, fallbackEmoji) {
+        function updateProfilePicturePreview(picture, fallback) {
             const preview = document.getElementById('editUserPicturePreview');
             if (picture) {
                 preview.innerHTML = `<img src="${picture}" alt="Profilbild" class="w-full h-full object-cover" />`;
             } else {
-                preview.innerHTML = `<span class="text-4xl">${fallbackEmoji || '👤'}</span>`;
+                // Zeige Platzhalter-Avatar mit Initial
+                const initial = editingUser?.name?.charAt(0).toUpperCase() || '?';
+                preview.innerHTML = `<div class="w-full h-full rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-4xl">${initial}</div>`;
             }
         }
 
@@ -1386,14 +1387,14 @@ if (file_exists('bring-config.php')) {
                        </div>`
                     : '<div class="text-sm text-gray-400 mt-2 italic">Keine Zutaten</div>';
                 
-                const modifierInfo = recipe.modifier_name 
+                const modifierInfo = recipe.modifier_name
                     ? `<div class="flex items-center gap-1 text-xs text-gray-500 mt-2">
-                        ${recipe.modifier_image ? `<span class="text-base">${recipe.modifier_image}</span>` : ''}
+                        ${recipe.modifier_picture ? `<img src="${recipe.modifier_picture}" alt="${recipe.modifier_name}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
                         <span>zuletzt bearbeitet von ${recipe.modifier_name}</span>
                        </div>`
-                    : (recipe.creator_name 
+                    : (recipe.creator_name
                         ? `<div class="flex items-center gap-1 text-xs text-gray-500 mt-2">
-                            ${recipe.creator_image ? `<span class="text-base">${recipe.creator_image}</span>` : ''}
+                            ${recipe.creator_picture ? `<img src="${recipe.creator_picture}" alt="${recipe.creator_name}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
                             <span>erstellt von ${recipe.creator_name}</span>
                            </div>`
                         : '');
