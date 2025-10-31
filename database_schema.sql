@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `profile_image` varchar(10) DEFAULT '👤',
-  `profile_picture` varchar(255) DEFAULT NULL,
+  `profile_picture` TEXT DEFAULT NULL,
   `is_admin` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

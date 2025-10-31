@@ -739,12 +739,12 @@ if (file_exists('bring-config.php')) {
                                         <span class="text-sm font-medium text-gray-800">${recipeTitle}</span>
                                         ${modifiedBy ? `
                                         <div class="flex items-center gap-1 text-xs text-gray-500">
-                                            ${modifiedByPicture 
-                                                ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` 
-                                                : modifiedByImage 
-                                                    ? `<span class="text-base">${modifiedByImage}</span>` 
+                                            ${modifiedByPicture
+                                                ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />`
+                                                : modifiedByImage
+                                                    ? `<span class="text-base">${modifiedByImage}</span>`
                                                     : ''}
-                                            <span>${modifiedBy.charAt(0).toUpperCase()}</span>
+                                            <span>${modifiedBy}</span>
                                         </div>
                                         ` : ''}
                                     </div>
