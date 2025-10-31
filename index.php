@@ -504,6 +504,7 @@ $menuConfig = [
         let recipes = [];
         let weekPlan = {};
         let lockedMeals = new Set();
+        let disabledMeals = new Set();
         let currentWeek = { weekNumber: 0, year: 0 };
         let selectedMeal = { day: null, type: null };
         let editingUser = null;
@@ -675,17 +676,21 @@ $menuConfig = [
             if (data) {
                 currentWeek = { weekNumber: data.weekNumber, year: data.year };
                 weekPlan = data.plan;
-                
+
                 // Locked meals extrahieren
                 lockedMeals.clear();
+                disabledMeals.clear();
                 Object.entries(weekPlan).forEach(([day, meals]) => {
                     Object.entries(meals).forEach(([type, meal]) => {
                         if (meal && meal.is_locked) {
                             lockedMeals.add(`${day}-${type}`);
                         }
+                        if (meal && meal.is_disabled) {
+                            disabledMeals.add(`${day}-${type}`);
+                        }
                     });
                 });
-                
+
                 displayWeekPlan();
             }
         }
@@ -707,6 +712,7 @@ $menuConfig = [
                 mealTypes.forEach(meal => {
                     const mealKey = `${day}-${meal}`;
                     const isLocked = lockedMeals.has(mealKey);
+                    const isDisabled = disabledMeals.has(mealKey);
                     const mealData = weekPlan[day]?.[meal];
                     const recipeTitle = mealData?.recipe_title || '';
                     const modifiedBy = mealData?.modified_by_name || '';
@@ -717,21 +723,33 @@ $menuConfig = [
                         <div class="p-4 border-b last:border-b-0">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-sm font-semibold text-gray-700">${meal}</span>
-                                <button 
-                                    onclick="toggleLock('${day}', '${meal}')"
-                                    class="p-1 rounded ${isLocked ? 'text-red-500' : 'text-gray-400'} hover:bg-gray-100"
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        ${isLocked 
-                                            ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>'
-                                            : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>'
-                                        }
-                                    </svg>
-                                </button>
+                                <div class="flex gap-1">
+                                    <button
+                                        onclick="toggleLock('${day}', '${meal}')"
+                                        class="p-1 rounded ${isLocked ? 'text-red-500' : 'text-gray-400'} hover:bg-gray-100"
+                                        title="${isLocked ? 'Entsperren' : 'Sperren'}"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            ${isLocked
+                                                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>'
+                                                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>'
+                                            }
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onclick="toggleDisabled('${day}', '${meal}')"
+                                        class="p-1 rounded ${isDisabled ? 'text-red-500' : 'text-gray-400'} hover:bg-gray-100"
+                                        title="${isDisabled ? 'Wieder aktivieren' : 'Deaktivieren'}"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                             
-                            <div 
-                                draggable="${recipeTitle ? 'true' : 'false'}"
+                            <div
+                                draggable="${recipeTitle && !isDisabled ? 'true' : 'false'}"
                                 data-day="${day}"
                                 data-meal="${meal}"
                                 ondragstart="handleDragStart(event)"
@@ -740,22 +758,28 @@ $menuConfig = [
                                 ondrop="handleDrop(event)"
                                 ondragend="handleDragEnd(event)"
                                 onclick="handleMealClick('${day}', '${meal}', event)"
-                                class="min-h-16 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors ${recipeTitle ? 'cursor-grab active:cursor-grabbing' : ''}"
+                                class="min-h-16 p-3 rounded-lg transition-colors ${
+                                    isDisabled
+                                        ? 'bg-red-50 border-2 border-red-200 cursor-not-allowed'
+                                        : `bg-gray-50 cursor-pointer hover:bg-gray-100 ${recipeTitle ? 'cursor-grab active:cursor-grabbing' : ''}`
+                                }"
                                 style="touch-action: none;"
                             >
-                                ${recipeTitle 
-                                    ? `
-                                    <div class="flex flex-col gap-1">
-                                        <span class="text-sm font-medium text-gray-800">${recipeTitle}</span>
-                                        ${modifiedBy ? `
-                                        <div class="flex items-center gap-1 text-xs text-gray-500">
-                                            ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
-                                            <span>${modifiedBy}</span>
+                                ${isDisabled
+                                    ? '<div class="flex items-center justify-center h-full"><span class="text-sm text-red-500 font-medium">🚫 Nicht verfügbar</span></div>'
+                                    : recipeTitle
+                                        ? `
+                                        <div class="flex flex-col gap-1">
+                                            <span class="text-sm font-medium text-gray-800">${recipeTitle}</span>
+                                            ${modifiedBy ? `
+                                            <div class="flex items-center gap-1 text-xs text-gray-500">
+                                                ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
+                                                <span>${modifiedBy}</span>
+                                            </div>
+                                            ` : ''}
                                         </div>
-                                        ` : ''}
-                                    </div>
-                                    `
-                                    : '<div class="flex items-center justify-center h-full"><span class="text-sm text-gray-400">Tippen zum Auswählen</span></div>'
+                                        `
+                                        : '<div class="flex items-center justify-center h-full"><span class="text-sm text-gray-400">Tippen zum Auswählen</span></div>'
                                 }
                             </div>
                         </div>
@@ -859,8 +883,9 @@ $menuConfig = [
         }
 
         function handleMealClick(day, meal, event) {
-            // Nur öffnen wenn nicht gedragged wurde
-            if (!isDragging) {
+            // Nur öffnen wenn nicht gedragged wurde und nicht disabled ist
+            const mealKey = `${day}-${meal}`;
+            if (!isDragging && !disabledMeals.has(mealKey)) {
                 showSelectRecipe(day, meal);
             }
         }
@@ -985,7 +1010,7 @@ $menuConfig = [
 
         function toggleLock(day, meal) {
             const mealKey = `${day}-${meal}`;
-            
+
             if (lockedMeals.has(mealKey)) {
                 lockedMeals.delete(mealKey);
             } else {
@@ -997,6 +1022,37 @@ $menuConfig = [
             }
 
             apiCall('/toggle_lock', 'POST', {
+                weekNumber: currentWeek.weekNumber,
+                year: currentWeek.year,
+                weekday: day,
+                mealType: meal
+            });
+
+            displayWeekPlan();
+        }
+
+        async function toggleDisabled(day, meal) {
+            const mealKey = `${day}-${meal}`;
+
+            // Toggle disabled state
+            if (disabledMeals.has(mealKey)) {
+                disabledMeals.delete(mealKey);
+            } else {
+                disabledMeals.add(mealKey);
+                // Wenn disabled wird, Rezept entfernen
+                if (weekPlan[day]?.[meal]) {
+                    weekPlan[day][meal].recipe_id = null;
+                    weekPlan[day][meal].recipe_title = null;
+                }
+            }
+
+            // Update disabled state im weekPlan
+            if (weekPlan[day]?.[meal]) {
+                weekPlan[day][meal].is_disabled = disabledMeals.has(mealKey);
+            }
+
+            // API Call
+            await apiCall('/toggle_disabled', 'POST', {
                 weekNumber: currentWeek.weekNumber,
                 year: currentWeek.year,
                 weekday: day,
@@ -1026,8 +1082,8 @@ $menuConfig = [
                 mealTypes.forEach(meal => {
                     const mealKey = `${day}-${meal}`;
 
-                    // Überspringe gefixte/locked Meals
-                    if (lockedMeals.has(mealKey)) {
+                    // Überspringe gefixte/locked oder disabled Meals
+                    if (lockedMeals.has(mealKey) || disabledMeals.has(mealKey)) {
                         return;
                     }
 
