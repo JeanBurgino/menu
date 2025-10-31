@@ -79,6 +79,8 @@ class MenuPlannerAPI {
                     return $this->updateMeal();
                 case 'toggle_lock':
                     return $this->toggleLock();
+                case 'toggle_disabled':
+                    return $this->toggleDisabled();
                 
                 // Bring! Export
                 case 'save_bring_recipe':
@@ -391,6 +393,7 @@ class MenuPlannerAPI {
                     'recipe_id' => $row['recipe_id'],
                     'recipe_title' => $row['recipe_title'],
                     'is_locked' => (bool)$row['is_locked'],
+                    'is_disabled' => isset($row['is_disabled']) ? (bool)$row['is_disabled'] : false,
                     'last_modified_by' => $row['last_modified_by'],
                     'modified_by_name' => $row['modified_by_name'],
                     'modified_by_image' => $row['modified_by_image'],
@@ -515,9 +518,9 @@ class MenuPlannerAPI {
     
     private function toggleLock() {
         $data = $this->getRequestData();
-        
+
         $this->db->execute("
-            UPDATE week_plan 
+            UPDATE week_plan
             SET is_locked = NOT is_locked
             WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?
         ", [
@@ -526,7 +529,53 @@ class MenuPlannerAPI {
             $data['weekday'],
             $data['mealType']
         ]);
-        
+
+        $this->sendJSON(['success' => true]);
+    }
+
+    private function toggleDisabled() {
+        $data = $this->getRequestData();
+        $week = $this->getCurrentWeek();
+
+        $weekNumber = $data['weekNumber'] ?? $week['weekNumber'];
+        $year = $data['year'] ?? $week['year'];
+        $weekday = $data['weekday'];
+        $mealType = $data['mealType'];
+
+        // Prüfe ob Eintrag existiert
+        $existing = $this->db->fetchOne(
+            "SELECT id, is_disabled FROM week_plan
+             WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?",
+            [$weekNumber, $year, $weekday, $mealType]
+        );
+
+        if ($existing) {
+            // Toggle is_disabled
+            $newDisabledState = !$existing['is_disabled'];
+
+            if ($newDisabledState) {
+                // Wenn disabled wird, recipe_id auf NULL setzen
+                $this->db->execute("
+                    UPDATE week_plan
+                    SET is_disabled = 1, recipe_id = NULL
+                    WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?
+                ", [$weekNumber, $year, $weekday, $mealType]);
+            } else {
+                // Wenn wieder enabled wird, nur is_disabled auf 0 setzen
+                $this->db->execute("
+                    UPDATE week_plan
+                    SET is_disabled = 0
+                    WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?
+                ", [$weekNumber, $year, $weekday, $mealType]);
+            }
+        } else {
+            // Erstelle neuen Eintrag mit is_disabled = 1
+            $this->db->execute("
+                INSERT INTO week_plan (week_number, year, weekday, meal_type, recipe_id, is_locked, is_disabled)
+                VALUES (?, ?, ?, ?, NULL, 0, 1)
+            ", [$weekNumber, $year, $weekday, $mealType]);
+        }
+
         $this->sendJSON(['success' => true]);
     }
     
