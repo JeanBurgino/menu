@@ -8,9 +8,10 @@ Diese Migration fügt die Möglichkeit hinzu, einzelne Tage/Mahlzeiten in der Wo
 ### Neue Features:
 1. **Kreuz-Icon** neben dem Schloss-Symbol
 2. **Deaktivierungs-Funktion**: Wenn das Kreuz gedrückt wird:
-   - Wird das aktuelle Menü entfernt
-   - Wird verhindert, dass neue Menüs ausgewählt werden können
-   - Wird der Bereich rötlich gekennzeichnet
+   - Das eingetragene Rezept bleibt sichtbar, wird aber durchgestrichen
+   - Der Eintrag wird rötlich gekennzeichnet mit 🚫-Symbol
+   - Es wird verhindert, dass neue Menüs ausgewählt werden können
+   - Der Eintrag kann nicht mehr per Drag & Drop verschoben werden
 3. **Reaktivierung**: Erneutes Drücken des Kreuzes aktiviert den Eintrag wieder
 
 ## Datenbank-Migration durchführen
@@ -48,22 +49,25 @@ ON DUPLICATE KEY UPDATE applied_at = CURRENT_TIMESTAMP;
 - Neues Feld `is_disabled` in Tabelle `week_plan`
 
 ### Backend (api.php):
-- Neue Funktion `toggleDisabled()`
+- Neue Funktion `toggleDisabled()` - Togglet nur den Status, entfernt das Rezept NICHT
 - Erweiterte `getWeekPlan()` Funktion um `is_disabled` Status
 
 ### Frontend (index.php):
 - Neue globale Variable `disabledMeals`
 - Kreuz-Icon neben Schloss-Icon
-- Rötliche Kennzeichnung für deaktivierte Einträge
+- Rötliche Kennzeichnung für deaktivierte Einträge (durchgestrichener Text, 🚫-Symbol)
 - Verhinderte Selektion bei deaktivierten Einträgen
+- Rezept bleibt sichtbar, aber durchgestrichen
 - Angepasste `randomizeWeekPlan()` Funktion (überspringt disabled-Einträge)
 
 ## Nutzung
 
 1. Klicke auf das **Kreuz-Icon** neben dem Schloss
-2. Der Eintrag wird **rötlich** markiert mit "🚫 Nicht verfügbar"
-3. Es können **keine neuen Menüs** ausgewählt werden
-4. Klicke erneut auf das Kreuz, um den Eintrag **wieder zu aktivieren**
+2. Der Eintrag wird **rötlich** markiert und das Rezept wird **durchgestrichen** angezeigt
+3. Das bestehende Rezept **bleibt sichtbar**, kann aber nicht mehr geändert werden
+4. Es können **keine neuen Menüs** ausgewählt werden
+5. Der Eintrag kann nicht mehr per **Drag & Drop** verschoben werden
+6. Klicke erneut auf das Kreuz, um den Eintrag **wieder zu aktivieren**
 
 ## Troubleshooting
 

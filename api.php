@@ -550,24 +550,12 @@ class MenuPlannerAPI {
         );
 
         if ($existing) {
-            // Toggle is_disabled
-            $newDisabledState = !$existing['is_disabled'];
-
-            if ($newDisabledState) {
-                // Wenn disabled wird, recipe_id auf NULL setzen
-                $this->db->execute("
-                    UPDATE week_plan
-                    SET is_disabled = 1, recipe_id = NULL
-                    WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?
-                ", [$weekNumber, $year, $weekday, $mealType]);
-            } else {
-                // Wenn wieder enabled wird, nur is_disabled auf 0 setzen
-                $this->db->execute("
-                    UPDATE week_plan
-                    SET is_disabled = 0
-                    WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?
-                ", [$weekNumber, $year, $weekday, $mealType]);
-            }
+            // Toggle is_disabled (Rezept wird NICHT entfernt)
+            $this->db->execute("
+                UPDATE week_plan
+                SET is_disabled = NOT is_disabled
+                WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?
+            ", [$weekNumber, $year, $weekday, $mealType]);
         } else {
             // Erstelle neuen Eintrag mit is_disabled = 1
             $this->db->execute("

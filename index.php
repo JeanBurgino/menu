@@ -765,20 +765,23 @@ $menuConfig = [
                                 }"
                                 style="touch-action: none;"
                             >
-                                ${isDisabled
-                                    ? '<div class="flex items-center justify-center h-full"><span class="text-sm text-red-500 font-medium">🚫 Nicht verfügbar</span></div>'
-                                    : recipeTitle
-                                        ? `
-                                        <div class="flex flex-col gap-1">
-                                            <span class="text-sm font-medium text-gray-800">${recipeTitle}</span>
-                                            ${modifiedBy ? `
-                                            <div class="flex items-center gap-1 text-xs text-gray-500">
-                                                ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
-                                                <span>${modifiedBy}</span>
-                                            </div>
-                                            ` : ''}
+                                ${recipeTitle
+                                    ? `
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center gap-2">
+                                            ${isDisabled ? '<span class="text-red-500 text-xs font-bold">🚫</span>' : ''}
+                                            <span class="text-sm font-medium ${isDisabled ? 'text-red-700 line-through' : 'text-gray-800'}">${recipeTitle}</span>
                                         </div>
-                                        `
+                                        ${modifiedBy ? `
+                                        <div class="flex items-center gap-1 text-xs ${isDisabled ? 'text-red-600' : 'text-gray-500'}">
+                                            ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
+                                            <span>${modifiedBy}</span>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                    `
+                                    : isDisabled
+                                        ? '<div class="flex items-center justify-center h-full"><span class="text-sm text-red-500 font-medium">🚫 Nicht verfügbar</span></div>'
                                         : '<div class="flex items-center justify-center h-full"><span class="text-sm text-gray-400">Tippen zum Auswählen</span></div>'
                                 }
                             </div>
@@ -1034,16 +1037,11 @@ $menuConfig = [
         async function toggleDisabled(day, meal) {
             const mealKey = `${day}-${meal}`;
 
-            // Toggle disabled state
+            // Toggle disabled state (Rezept wird NICHT entfernt)
             if (disabledMeals.has(mealKey)) {
                 disabledMeals.delete(mealKey);
             } else {
                 disabledMeals.add(mealKey);
-                // Wenn disabled wird, Rezept entfernen
-                if (weekPlan[day]?.[meal]) {
-                    weekPlan[day][meal].recipe_id = null;
-                    weekPlan[day][meal].recipe_title = null;
-                }
             }
 
             // Update disabled state im weekPlan
