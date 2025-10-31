@@ -1,4 +1,7 @@
 <?php
+// Lade Config
+require_once __DIR__ . '/config.php';
+
 // Lade Bring! Konfiguration
 $bringConfig = ['list_name' => 'OBI']; // Default
 if (file_exists('bring-config.php')) {
@@ -8,6 +11,11 @@ if (file_exists('bring-config.php')) {
         'list_name' => defined('BRING_LIST_NAME') ? BRING_LIST_NAME : 'OBI'
     ];
 }
+
+// Menu-Konfiguration für JavaScript
+$menuConfig = [
+    'default_weekday_dinner_id' => defined('DEFAULT_WEEKDAY_DINNER_RECIPE_ID') ? DEFAULT_WEEKDAY_DINNER_RECIPE_ID : null
+];
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -19,6 +27,8 @@ if (file_exists('bring-config.php')) {
     <script>
         // Bring! Konfiguration von PHP
         const BRING_CONFIG = <?php echo json_encode($bringConfig); ?>;
+        // Menu-Konfiguration von PHP
+        const MENU_CONFIG = <?php echo json_encode($menuConfig); ?>;
     </script>
     <style>
         /* Zusätzliche Styles für bessere UX */
@@ -1004,41 +1014,87 @@ if (file_exists('bring-config.php')) {
 
             const usedRecipes = new Set(); // Tracking für keine Duplikate in einer Woche
             const weekdaysForDinner = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+            const weekendDays = ['Samstag', 'Sonntag'];
 
-            // Suche nach "Chalt Nachtessen" Rezept
-            const chaltNachtessenRecipe = recipes.find(r => r.title.toLowerCase().includes('chalt'));
+            // Standard-Abendessen für Mo-Fr aus Config
+            const defaultWeekdayDinnerId = MENU_CONFIG.default_weekday_dinner_id;
+            const defaultWeekdayDinnerRecipe = defaultWeekdayDinnerId
+                ? recipes.find(r => r.id == defaultWeekdayDinnerId)
+                : null;
 
             weekdays.forEach(day => {
                 mealTypes.forEach(meal => {
                     const mealKey = `${day}-${meal}`;
 
-                    if (!lockedMeals.has(mealKey)) {
-                        if (!weekPlan[day]) {
-                            weekPlan[day] = {};
+                    // Überspringe gefixte/locked Meals
+                    if (lockedMeals.has(mealKey)) {
+                        return;
+                    }
+
+                    if (!weekPlan[day]) {
+                        weekPlan[day] = {};
+                    }
+
+                    let selectedRecipe = null;
+                    let availableRecipes = [];
+
+                    // Filtere Rezepte basierend auf Meal-Typ und Tag
+                    if (meal === 'Mittag') {
+                        // Für Mittag: Nur Rezepte mit is_lunch flag
+                        availableRecipes = recipes.filter(r =>
+                            r.is_lunch && !usedRecipes.has(r.id)
+                        );
+                    } else if (meal === 'Abendessen') {
+                        if (weekdaysForDinner.includes(day)) {
+                            // Mo-Fr Abendessen: Verwende Standard-Rezept (falls konfiguriert)
+                            if (defaultWeekdayDinnerRecipe) {
+                                selectedRecipe = defaultWeekdayDinnerRecipe;
+                                // Standard-Rezept wird nicht zu usedRecipes hinzugefügt,
+                                // da es mehrfach verwendet werden soll
+                            } else {
+                                // Kein Standard-Rezept: Wähle Abendessen-Rezepte (nicht für Wochenende)
+                                availableRecipes = recipes.filter(r =>
+                                    r.is_dinner && !r.is_weekend && !usedRecipes.has(r.id)
+                                );
+                            }
+                        } else if (weekendDays.includes(day)) {
+                            // Sa-So Abendessen: Nur Rezepte mit is_dinner UND is_weekend flag
+                            availableRecipes = recipes.filter(r =>
+                                r.is_dinner && r.is_weekend && !usedRecipes.has(r.id)
+                            );
                         }
+                    }
 
-                        let selectedRecipe;
-
-                        // Spezialfall: "Chalt Nachtessen" für Mo-Fr Abendessen (falls vorhanden)
-                        if (meal === 'Abendessen' && weekdaysForDinner.includes(day) && chaltNachtessenRecipe) {
-                            selectedRecipe = chaltNachtessenRecipe;
+                    // Falls noch kein Rezept ausgewählt wurde, wähle zufällig aus verfügbaren
+                    if (!selectedRecipe) {
+                        if (availableRecipes.length > 0) {
+                            selectedRecipe = availableRecipes[Math.floor(Math.random() * availableRecipes.length)];
+                            usedRecipes.add(selectedRecipe.id);
                         } else {
-                            // Wähle zufälliges Rezept, das noch nicht verwendet wurde
-                            let attempts = 0;
+                            // Falls keine verfügbaren Rezepte: Erlaube Wiederholungen
+                            let fallbackRecipes = [];
 
-                            do {
-                                selectedRecipe = recipes[Math.floor(Math.random() * recipes.length)];
-                                attempts++;
-                            } while (usedRecipes.has(selectedRecipe.id) && attempts < recipes.length);
-
-                            // Wenn alle Rezepte verwendet wurden, erlaube Wiederholungen
-                            if (attempts >= recipes.length) {
-                                usedRecipes.clear();
+                            if (meal === 'Mittag') {
+                                fallbackRecipes = recipes.filter(r => r.is_lunch);
+                            } else if (meal === 'Abendessen') {
+                                if (weekendDays.includes(day)) {
+                                    fallbackRecipes = recipes.filter(r => r.is_dinner && r.is_weekend);
+                                } else {
+                                    fallbackRecipes = recipes.filter(r => r.is_dinner && !r.is_weekend);
+                                }
                             }
 
-                            usedRecipes.add(selectedRecipe.id);
+                            if (fallbackRecipes.length > 0) {
+                                selectedRecipe = fallbackRecipes[Math.floor(Math.random() * fallbackRecipes.length)];
+                            } else {
+                                // Letzter Fallback: Irgendein Rezept
+                                selectedRecipe = recipes[Math.floor(Math.random() * recipes.length)];
+                            }
                         }
+                    }
 
+                    // Rezept zuweisen
+                    if (selectedRecipe) {
                         weekPlan[day][meal] = {
                             recipe_id: selectedRecipe.id,
                             recipe_title: selectedRecipe.title,
