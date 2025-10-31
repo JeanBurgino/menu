@@ -1,0 +1,30 @@
+# Log-Dateien
+logs/*.log
+logs/**/*.log
+
+# Temporäre Dateien
+*.tmp
+*.swp
+*.swo
+*~
+
+# Editor-Backups
+.*.sw[op]
+.DS_Store
+
+# PHP
+composer.phar
+vendor/
+
+# Exports
+exports/*.csv
+exports/*.json
+exports/bring/*.json
+
+# Konfiguration (falls sensibel)
+# config.php
+
+# IDE
+.vscode/
+.idea/
+*.iml
