@@ -51,6 +51,11 @@ if (!defined('APP_NAME')) define('APP_NAME', 'Menüplaner');
 if (!defined('APP_VERSION')) define('APP_VERSION', '2.0.0');
 if (!defined('APP_TIMEZONE')) define('APP_TIMEZONE', 'Europe/Zurich');
 
+// === WOCHENPLAN-EINSTELLUNGEN ===
+// Standard-Abendessen für Montag bis Freitag (Menu-ID des Rezepts)
+// Trage hier die ID des gewünschten Standard-Abendessens ein
+if (!defined('DEFAULT_WEEKDAY_DINNER_RECIPE_ID')) define('DEFAULT_WEEKDAY_DINNER_RECIPE_ID', null);
+
 // === PFADE ===
 if (!defined('BASE_PATH')) define('BASE_PATH', dirname(__FILE__));
 if (!defined('EXPORTS_PATH')) define('EXPORTS_PATH', BASE_PATH . '/exports');
