@@ -1009,53 +1009,49 @@ if (file_exists('bring-config.php')) {
             const usedRecipes = new Set(); // Tracking für keine Duplikate in einer Woche
             const weekdaysForDinner = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
 
+            // Suche nach "Chalt Nachtessen" Rezept
+            const chaltNachtessenRecipe = recipes.find(r => r.title.toLowerCase().includes('chalt'));
+
             weekdays.forEach(day => {
                 mealTypes.forEach(meal => {
                     const mealKey = `${day}-${meal}`;
-                    
+
                     if (!lockedMeals.has(mealKey)) {
                         if (!weekPlan[day]) {
                             weekPlan[day] = {};
                         }
-                        
-                        // Spezialfall: "Chalt Nachtessen" für Mo-Fr Abendessen
-                        if (meal === 'Abendessen' && weekdaysForDinner.includes(day)) {
-                            weekPlan[day][meal] = {
-                                recipe_id: 21, // Feste ID für "Chalt Nachtessen"
-                                recipe_title: 'Chalt Nachtessen',
-                                is_locked: false,
-                                last_modified_by: currentUser.id,
-                                modified_by_name: currentUser.name,
-                                modified_by_image: currentUser.profile_image,
-                                modified_by_picture: currentUser.profile_picture
-                            };
+
+                        let selectedRecipe;
+
+                        // Spezialfall: "Chalt Nachtessen" für Mo-Fr Abendessen (falls vorhanden)
+                        if (meal === 'Abendessen' && weekdaysForDinner.includes(day) && chaltNachtessenRecipe) {
+                            selectedRecipe = chaltNachtessenRecipe;
                         } else {
                             // Wähle zufälliges Rezept, das noch nicht verwendet wurde
                             let attempts = 0;
-                            let randomRecipe;
-                            
+
                             do {
-                                randomRecipe = recipes[Math.floor(Math.random() * recipes.length)];
+                                selectedRecipe = recipes[Math.floor(Math.random() * recipes.length)];
                                 attempts++;
-                            } while (usedRecipes.has(randomRecipe.id) && attempts < recipes.length);
-                            
+                            } while (usedRecipes.has(selectedRecipe.id) && attempts < recipes.length);
+
                             // Wenn alle Rezepte verwendet wurden, erlaube Wiederholungen
                             if (attempts >= recipes.length) {
                                 usedRecipes.clear();
                             }
-                            
-                            usedRecipes.add(randomRecipe.id);
-                            
-                            weekPlan[day][meal] = {
-                                recipe_id: randomRecipe.id,
-                                recipe_title: randomRecipe.title,
-                                is_locked: false,
-                                last_modified_by: currentUser.id,
-                                modified_by_name: currentUser.name,
-                                modified_by_image: currentUser.profile_image,
-                                modified_by_picture: currentUser.profile_picture
-                            };
+
+                            usedRecipes.add(selectedRecipe.id);
                         }
+
+                        weekPlan[day][meal] = {
+                            recipe_id: selectedRecipe.id,
+                            recipe_title: selectedRecipe.title,
+                            is_locked: false,
+                            last_modified_by: currentUser.id,
+                            modified_by_name: currentUser.name,
+                            modified_by_image: currentUser.profile_image,
+                            modified_by_picture: currentUser.profile_picture
+                        };
                     }
                 });
             });

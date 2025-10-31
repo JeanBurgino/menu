@@ -426,6 +426,20 @@ class MenuPlannerAPI {
                 foreach ($meals as $mealType => $mealData) {
                     // Prüfe ob mealData ein Array ist und recipe_id gesetzt ist
                     if (is_array($mealData) && !empty($mealData['recipe_id'])) {
+                        $recipeId = $mealData['recipe_id'];
+
+                        // Prüfe ob recipe_id existiert
+                        $recipeExists = $this->db->fetchOne(
+                            "SELECT id FROM recipes WHERE id = ?",
+                            [$recipeId]
+                        );
+
+                        // Überspringe, wenn Rezept nicht existiert
+                        if (!$recipeExists) {
+                            $this->logError("Recipe with ID {$recipeId} does not exist, skipping", 400);
+                            continue;
+                        }
+
                         $modifiedBy = $mealData['last_modified_by'] ?? $userId;
                         $isLocked = isset($mealData['is_locked']) ? ($mealData['is_locked'] ? 1 : 0) : 0;
 
@@ -438,7 +452,7 @@ class MenuPlannerAPI {
                                 last_modified_by = VALUES(last_modified_by)
                         ", [
                             $weekNumber, $year, $weekday, $mealType,
-                            $mealData['recipe_id'],
+                            $recipeId,
                             $isLocked,
                             $modifiedBy
                         ]);
@@ -460,7 +474,7 @@ class MenuPlannerAPI {
     private function updateMeal() {
         $data = $this->getRequestData();
         $week = $this->getCurrentWeek();
-        
+
         $weekNumber = $data['weekNumber'] ?? $week['weekNumber'];
         $year = $data['year'] ?? $week['year'];
         $weekday = $data['weekday'];
@@ -468,24 +482,34 @@ class MenuPlannerAPI {
         $recipeId = $data['recipe_id'] ?? null;
         $isLocked = $data['is_locked'] ?? false;
         $userId = $data['user_id'] ?? null;
-        
+
         if ($recipeId) {
+            // Prüfe ob recipe_id existiert
+            $recipeExists = $this->db->fetchOne(
+                "SELECT id FROM recipes WHERE id = ?",
+                [$recipeId]
+            );
+
+            if (!$recipeExists) {
+                throw new Exception("Rezept mit ID {$recipeId} existiert nicht", 404);
+            }
+
             $this->db->execute("
                 INSERT INTO week_plan (week_number, year, weekday, meal_type, recipe_id, is_locked, last_modified_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
+                ON DUPLICATE KEY UPDATE
                     recipe_id = VALUES(recipe_id),
                     is_locked = VALUES(is_locked),
                     last_modified_by = VALUES(last_modified_by)
             ", [$weekNumber, $year, $weekday, $mealType, $recipeId, $isLocked, $userId]);
         } else {
             $this->db->execute(
-                "DELETE FROM week_plan 
+                "DELETE FROM week_plan
                  WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?",
                 [$weekNumber, $year, $weekday, $mealType]
             );
         }
-        
+
         $this->sendJSON(['success' => true]);
     }
     
