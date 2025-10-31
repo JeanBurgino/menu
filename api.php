@@ -359,28 +359,31 @@ class MenuPlannerAPI {
     
     private function getWeekPlan() {
         $week = $this->getCurrentWeek();
-        
+
         if (isset($this->params['week'])) {
             $week['weekNumber'] = (int)$this->params['week'];
             $week['year'] = (int)$this->params['year'];
         }
-        
+
         $rows = $this->db->fetchAll("
-            SELECT wp.*, r.title as recipe_title, u.name as modified_by_name
+            SELECT wp.*, r.title as recipe_title,
+                   u.name as modified_by_name,
+                   u.profile_image as modified_by_image,
+                   u.profile_picture as modified_by_picture
             FROM week_plan wp
             LEFT JOIN recipes r ON wp.recipe_id = r.id
             LEFT JOIN users u ON wp.last_modified_by = u.id
             WHERE wp.week_number = ? AND wp.year = ?
         ", [$week['weekNumber'], $week['year']]);
-        
+
         // Strukturieren
         $weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
         $plan = [];
-        
+
         foreach ($weekdays as $day) {
             $plan[$day] = ['Mittag' => null, 'Abendessen' => null];
         }
-        
+
         foreach ($rows as $row) {
             if (isset($plan[$row['weekday']])) {
                 $plan[$row['weekday']][$row['meal_type']] = [
@@ -389,11 +392,13 @@ class MenuPlannerAPI {
                     'recipe_title' => $row['recipe_title'],
                     'is_locked' => (bool)$row['is_locked'],
                     'last_modified_by' => $row['last_modified_by'],
-                    'modified_by_name' => $row['modified_by_name']
+                    'modified_by_name' => $row['modified_by_name'],
+                    'modified_by_image' => $row['modified_by_image'],
+                    'modified_by_picture' => $row['modified_by_picture']
                 ];
             }
         }
-        
+
         $this->sendJSON([
             'weekNumber' => $week['weekNumber'],
             'year' => $week['year'],
@@ -404,47 +409,50 @@ class MenuPlannerAPI {
     private function saveWeekPlan() {
         $data = $this->getRequestData();
         $week = $this->getCurrentWeek();
-        
+
         $weekNumber = $data['weekNumber'] ?? $week['weekNumber'];
         $year = $data['year'] ?? $week['year'];
         $plan = $data['plan'] ?? [];
         $userId = $data['user_id'] ?? null;
-        
+
         $this->db->beginTransaction();
         try {
             foreach ($plan as $weekday => $meals) {
+                // Prüfe ob $meals ein Array ist
+                if (!is_array($meals)) {
+                    continue;
+                }
+
                 foreach ($meals as $mealType => $mealData) {
-                    if ($mealData && isset($mealData['recipe_id'])) {
+                    // Prüfe ob mealData ein Array ist und recipe_id gesetzt ist
+                    if (is_array($mealData) && !empty($mealData['recipe_id'])) {
                         $modifiedBy = $mealData['last_modified_by'] ?? $userId;
-                        
+                        $isLocked = isset($mealData['is_locked']) ? ($mealData['is_locked'] ? 1 : 0) : 0;
+
                         $this->db->execute("
                             INSERT INTO week_plan (week_number, year, weekday, meal_type, recipe_id, is_locked, last_modified_by)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE 
+                            ON DUPLICATE KEY UPDATE
                                 recipe_id = VALUES(recipe_id),
                                 is_locked = VALUES(is_locked),
                                 last_modified_by = VALUES(last_modified_by)
                         ", [
                             $weekNumber, $year, $weekday, $mealType,
                             $mealData['recipe_id'],
-                            $mealData['is_locked'] ?? false,
+                            $isLocked,
                             $modifiedBy
                         ]);
-                    } else {
-                        $this->db->execute(
-                            "DELETE FROM week_plan 
-                             WHERE week_number = ? AND year = ? AND weekday = ? AND meal_type = ?",
-                            [$weekNumber, $year, $weekday, $mealType]
-                        );
                     }
                 }
             }
-            
+
             $this->db->commit();
             $this->sendJSON(['success' => true, 'weekNumber' => $weekNumber, 'year' => $year]);
-            
+
         } catch (Exception $e) {
             $this->db->rollback();
+            // Log detailed error
+            $this->logError('saveWeekPlan failed: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString(), 500);
             throw $e;
         }
     }
@@ -616,14 +624,17 @@ class MenuPlannerAPI {
         $this->logError($message, $code);
         $this->sendJSON([
             'error' => $message,
-            'code' => $code
+            'code' => $code,
+            'action' => $this->params['action'] ?? 'unknown'
         ], $code);
     }
-    
+
     private function logError($message, $code) {
         $logFile = LOGS_PATH . '/api_errors.log';
         $timestamp = date('Y-m-d H:i:s');
-        $logMessage = "[{$timestamp}] [HTTP {$code}] {$message}\n";
+        $action = $this->params['action'] ?? 'unknown';
+        $method = $this->method;
+        $logMessage = "[{$timestamp}] [HTTP {$code}] [{$method} {$action}] {$message}\n";
         @file_put_contents($logFile, $logMessage, FILE_APPEND);
     }
 }
