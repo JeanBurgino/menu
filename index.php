@@ -412,6 +412,7 @@ $menuConfig = [
             <!-- Buttons -->
             <div class="flex gap-3">
                 <button
+                    id="sendToBringBtn"
                     onclick="sendToBring()"
                     class="flex-1 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all flex items-center justify-center gap-2"
                 >
@@ -1876,36 +1877,47 @@ $menuConfig = [
         }
 
         async function sendToBring() {
-            if (bringArticles.length === 0) {
-                alert('Keine Artikel zum Senden vorhanden!');
-                return;
-            }
+            // Button deaktivieren, um Mehrfachklicks zu verhindern
+            const sendBtn = document.getElementById('sendToBringBtn');
+            sendBtn.disabled = true;
+            sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-            const listName = BRING_CONFIG.list_name || 'OBI';
-            const itemCount = bringArticles.length;
-
-            // Verwende bringArticles direkt
-            const items = bringArticles.map(article => ({
-                name: article.name,
-                specification: article.specification || ''
-            }));
-
-            // Versuche zuerst direkten API-Export
             try {
-                const result = await apiCall('/export_to_bring_direct', 'POST', { items });
-
-                if (result && result.success) {
-                    alert(`✅ ${itemCount} Artikel erfolgreich zu Bring! Liste "${listName}" hinzugefügt!`);
-                    closeBringModal();
+                if (bringArticles.length === 0) {
+                    alert('Keine Artikel zum Senden vorhanden!');
                     return;
                 }
-            } catch (error) {
-                console.log('Direkter API-Export nicht verfügbar, verwende Deeplink-Methode:', error);
-            }
 
-            // Fallback: Deeplink-Methode
-            await exportToBringDeeplink(items, listName, itemCount);
-            closeBringModal();
+                const listName = BRING_CONFIG.list_name || 'OBI';
+                const itemCount = bringArticles.length;
+
+                // Verwende bringArticles direkt
+                const items = bringArticles.map(article => ({
+                    name: article.name,
+                    specification: article.specification || ''
+                }));
+
+                // Versuche zuerst direkten API-Export
+                try {
+                    const result = await apiCall('/export_to_bring_direct', 'POST', { items });
+
+                    if (result && result.success) {
+                        alert(`✅ ${itemCount} Artikel erfolgreich zu Bring! Liste "${listName}" hinzugefügt!`);
+                        closeBringModal();
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Direkter API-Export nicht verfügbar, verwende Deeplink-Methode:', error);
+                }
+
+                // Fallback: Deeplink-Methode
+                await exportToBringDeeplink(items, listName, itemCount);
+                closeBringModal();
+            } finally {
+                // Button wieder aktivieren
+                sendBtn.disabled = false;
+                sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
         
         async function exportToBringDeeplink(items, listName, itemCount) {
