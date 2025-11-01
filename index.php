@@ -669,18 +669,48 @@ $menuConfig = [
             }
         }
 
+        // ==================== DISABLED MEALS PERSISTENCE ====================
+
+        function getDisabledMealsKey() {
+            return `disabledMeals_w${currentWeek.weekNumber}_y${currentWeek.year}`;
+        }
+
+        function saveDisabledMeals() {
+            const key = getDisabledMealsKey();
+            const disabledArray = Array.from(disabledMeals);
+            localStorage.setItem(key, JSON.stringify(disabledArray));
+        }
+
+        function loadDisabledMeals() {
+            const key = getDisabledMealsKey();
+            const stored = localStorage.getItem(key);
+
+            disabledMeals.clear();
+            if (stored) {
+                try {
+                    const disabledArray = JSON.parse(stored);
+                    disabledArray.forEach(item => disabledMeals.add(item));
+                } catch (e) {
+                    console.error('Fehler beim Laden von disabledMeals:', e);
+                }
+            }
+        }
+
         // ==================== WOCHENPLAN FUNKTIONEN ====================
 
         async function loadWeekPlan() {
             const data = await apiCall('/weekplan');
-            
+
             if (data) {
                 currentWeek = { weekNumber: data.weekNumber, year: data.year };
                 weekPlan = data.plan;
 
                 // Locked meals extrahieren
                 lockedMeals.clear();
-                // disabledMeals bleibt erhalten (wird nur im Frontend getracked)
+
+                // Disabled meals aus localStorage wiederherstellen
+                loadDisabledMeals();
+
                 Object.entries(weekPlan).forEach(([day, meals]) => {
                     Object.entries(meals).forEach(([type, meal]) => {
                         if (meal && meal.is_locked) {
@@ -1053,6 +1083,9 @@ $menuConfig = [
                     mealType: meal
                 });
             }
+
+            // Speichere disabled state in localStorage
+            saveDisabledMeals();
 
             displayWeekPlan();
         }
