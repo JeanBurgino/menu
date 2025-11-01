@@ -679,14 +679,11 @@ $menuConfig = [
 
                 // Locked meals extrahieren
                 lockedMeals.clear();
-                disabledMeals.clear();
+                // disabledMeals bleibt erhalten (wird nur im Frontend getracked)
                 Object.entries(weekPlan).forEach(([day, meals]) => {
                     Object.entries(meals).forEach(([type, meal]) => {
                         if (meal && meal.is_locked) {
                             lockedMeals.add(`${day}-${type}`);
-                        }
-                        if (meal && meal.is_disabled) {
-                            disabledMeals.add(`${day}-${type}`);
                         }
                     });
                 });
@@ -765,23 +762,20 @@ $menuConfig = [
                                 }"
                                 style="touch-action: none;"
                             >
-                                ${recipeTitle
-                                    ? `
-                                    <div class="flex flex-col gap-1">
-                                        <div class="flex items-center gap-2">
-                                            ${isDisabled ? '<span class="text-red-500 text-xs font-bold">🚫</span>' : ''}
-                                            <span class="text-sm font-medium ${isDisabled ? 'text-red-700 line-through' : 'text-gray-800'}">${recipeTitle}</span>
+                                ${isDisabled
+                                    ? '<div class="flex items-center justify-center h-full"><span class="text-sm text-red-500 font-medium">🚫 Nicht verfügbar</span></div>'
+                                    : recipeTitle
+                                        ? `
+                                        <div class="flex flex-col gap-1">
+                                            <span class="text-sm font-medium text-gray-800">${recipeTitle}</span>
+                                            ${modifiedBy ? `
+                                            <div class="flex items-center gap-1 text-xs text-gray-500">
+                                                ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
+                                                <span>${modifiedBy}</span>
+                                            </div>
+                                            ` : ''}
                                         </div>
-                                        ${modifiedBy ? `
-                                        <div class="flex items-center gap-1 text-xs ${isDisabled ? 'text-red-600' : 'text-gray-500'}">
-                                            ${modifiedByPicture ? `<img src="${modifiedByPicture}" alt="${modifiedBy}" class="w-5 h-5 rounded-full object-cover border border-gray-300" />` : ''}
-                                            <span>${modifiedBy}</span>
-                                        </div>
-                                        ` : ''}
-                                    </div>
-                                    `
-                                    : isDisabled
-                                        ? '<div class="flex items-center justify-center h-full"><span class="text-sm text-red-500 font-medium">🚫 Nicht verfügbar</span></div>'
+                                        `
                                         : '<div class="flex items-center justify-center h-full"><span class="text-sm text-gray-400">Tippen zum Auswählen</span></div>'
                                 }
                             </div>
@@ -1037,25 +1031,27 @@ $menuConfig = [
         async function toggleDisabled(day, meal) {
             const mealKey = `${day}-${meal}`;
 
-            // Toggle disabled state (Rezept wird NICHT entfernt)
+            // Toggle disabled state
             if (disabledMeals.has(mealKey)) {
+                // Reaktivieren
                 disabledMeals.delete(mealKey);
             } else {
+                // Deaktivieren: Rezept entfernen
                 disabledMeals.add(mealKey);
-            }
 
-            // Update disabled state im weekPlan
-            if (weekPlan[day]?.[meal]) {
-                weekPlan[day][meal].is_disabled = disabledMeals.has(mealKey);
-            }
+                // Rezept aus weekPlan entfernen
+                if (weekPlan[day]) {
+                    weekPlan[day][meal] = null;
+                }
 
-            // API Call
-            await apiCall('/toggle_disabled', 'POST', {
-                weekNumber: currentWeek.weekNumber,
-                year: currentWeek.year,
-                weekday: day,
-                mealType: meal
-            });
+                // API Call: Eintrag löschen
+                await apiCall('/clear_meal', 'POST', {
+                    weekNumber: currentWeek.weekNumber,
+                    year: currentWeek.year,
+                    weekday: day,
+                    mealType: meal
+                });
+            }
 
             displayWeekPlan();
         }
