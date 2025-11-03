@@ -26,7 +26,7 @@ if (!defined('BRING_PASSWORD')) {
     define('BRING_PASSWORD', 'Mj5696Cj');
 }
 if (!defined('BRING_LIST_NAME')) {
-    define('BRING_LIST_NAME', 'OBI');
+    define('BRING_LIST_NAME', 'Zuhause');
 }
 if (!defined('BRING_USE_API')) {
     define('BRING_USE_API', true);
