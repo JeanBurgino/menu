@@ -15,7 +15,7 @@ define('BRING_PASSWORD', 'Mj5696Cj');
 // ==================== BRING! LISTEN ====================
 // Name deiner Standard-Einkaufsliste in der Bring! App
 
-define('BRING_LIST_NAME', 'OBI');
+define('BRING_LIST_NAME', 'Zuhause');
 
 // ==================== API-MODUS ====================
 // true  = Direkter API-Zugriff (EMPFOHLEN, wenn Login-Daten vorhanden)
