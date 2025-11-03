@@ -14,7 +14,8 @@ if (file_exists('bring-config.php')) {
 
 // Menu-Konfiguration für JavaScript
 $menuConfig = [
-    'default_weekday_dinner_id' => defined('DEFAULT_WEEKDAY_DINNER_RECIPE_ID') ? DEFAULT_WEEKDAY_DINNER_RECIPE_ID : null
+    'default_weekday_dinner_id' => defined('DEFAULT_WEEKDAY_DINNER_RECIPE_ID') ? DEFAULT_WEEKDAY_DINNER_RECIPE_ID : null,
+    'debug_mode' => defined('DEBUG_MODE') ? DEBUG_MODE : false
 ];
 ?>
 <!DOCTYPE html>
@@ -515,6 +516,28 @@ $menuConfig = [
 
         const weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
         const mealTypes = ['Mittag', 'Abendessen'];
+
+        // ==================== DEBUG HELPER FUNKTIONEN ====================
+
+        /**
+         * Debug-Confirm: Zeigt Bestätigungsdialog nur im Debug-Modus
+         * Im normalen Modus wird die Aktion ohne Bestätigung ausgeführt
+         */
+        function debugConfirm(message) {
+            if (MENU_CONFIG.debug_mode) {
+                return confirm(message);
+            }
+            return true; // Im Produktionsmodus: Keine Bestätigung nötig
+        }
+
+        /**
+         * Debug-Alert: Zeigt Alert-Nachricht nur im Debug-Modus
+         */
+        function debugAlert(message) {
+            if (MENU_CONFIG.debug_mode) {
+                alert(message);
+            }
+        }
 
         // Initialisierung beim Laden der Seite
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1452,7 +1475,7 @@ $menuConfig = [
         }
 
         function confirmDeleteUser(userId, userName) {
-            if (confirm(`Möchten Sie den Benutzer "${userName}" wirklich löschen?`)) {
+            if (debugConfirm(`Möchten Sie den Benutzer "${userName}" wirklich löschen?`)) {
                 deleteUserById(userId);
             }
         }
@@ -1730,7 +1753,7 @@ $menuConfig = [
         }
 
         function confirmDeleteRecipe(recipeId, title) {
-            if (confirm(`Möchten Sie das Rezept "${title}" wirklich löschen?`)) {
+            if (debugConfirm(`Möchten Sie das Rezept "${title}" wirklich löschen?`)) {
                 deleteRecipeById(recipeId);
             }
         }
@@ -1877,7 +1900,7 @@ $menuConfig = [
         }
 
         function deleteBringArticle(index) {
-            if (confirm('Möchten Sie diesen Artikel wirklich entfernen?')) {
+            if (debugConfirm('Möchten Sie diesen Artikel wirklich entfernen?')) {
                 bringArticles.splice(index, 1);
                 displayBringArticles();
             }
@@ -1993,8 +2016,8 @@ $menuConfig = [
             const message = `${itemCount} Artikel in Bring! importieren:\n\n${summary}${itemCount > 10 ? '\n...' : ''}\n\n` +
                            `Nach dem Öffnen von Bring! wirst du nach der Liste gefragt.\n` +
                            `Wähle dort "${listName}" aus!`;
-            
-            if (confirm(message)) {
+
+            if (debugConfirm(message)) {
                 // Öffne Bring! Deeplink
                 window.open(bringDeeplink, '_blank');
             }

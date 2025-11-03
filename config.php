@@ -51,6 +51,12 @@ if (!defined('APP_NAME')) define('APP_NAME', 'Menüplaner');
 if (!defined('APP_VERSION')) define('APP_VERSION', '2.0.0');
 if (!defined('APP_TIMEZONE')) define('APP_TIMEZONE', 'Europe/Zurich');
 
+// === DEBUG MODUS ===
+// Aktiviere DEBUG_MODE für zusätzliche Bestätigungsdialoge
+// true = Zeige Bestätigungsdialoge (z.B. "Möchten Sie wirklich...")
+// false = Keine Bestätigungsdialoge, direkte Aktion
+if (!defined('DEBUG_MODE')) define('DEBUG_MODE', false);
+
 // === WOCHENPLAN-EINSTELLUNGEN ===
 // Standard-Abendessen für Montag bis Freitag (Menu-ID des Rezepts)
 // Trage hier die ID des gewünschten Standard-Abendessens ein
