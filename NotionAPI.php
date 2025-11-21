@@ -138,20 +138,20 @@ class NotionAPI {
                 'database_id' => $this->databaseId
             ],
             'properties' => [
+                'Wochentag' => [
+                    'title' => [
+                        [
+                            'text' => [
+                                'content' => $weekday
+                            ]
+                        ]
+                    ]
+                ],
                 'Name' => [
                     'rich_text' => [
                         [
                             'text' => [
                                 'content' => $name
-                            ]
-                        ]
-                    ]
-                ],
-                'Wochentag' => [
-                    'rich_text' => [
-                        [
-                            'text' => [
-                                'content' => $weekday
                             ]
                         ]
                     ]
