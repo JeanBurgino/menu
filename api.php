@@ -87,7 +87,11 @@ class MenuPlannerAPI {
                     return $this->saveBringRecipe();
                 case 'export_to_bring_direct':
                     return $this->exportToBringDirect();
-                
+
+                // Notion Export
+                case 'export_to_notion':
+                    return $this->exportToNotion();
+
                 default:
                     throw new Exception('Ungültige Aktion: ' . $action, 400);
             }
@@ -622,7 +626,91 @@ class MenuPlannerAPI {
             'failed' => $result['failed']
         ]);
     }
-    
+
+    // ==================== NOTION EXPORT ====================
+
+    private function exportToNotion() {
+        // Prüfe ob Notion Config existiert
+        if (!defined('NOTION_API_TOKEN') || !defined('NOTION_DATABASE_ID')) {
+            throw new Exception('Notion Konfiguration fehlt in config.php', 500);
+        }
+
+        if (empty(NOTION_API_TOKEN)) {
+            throw new Exception('Notion API Token ist nicht konfiguriert', 400);
+        }
+
+        if (empty(NOTION_DATABASE_ID)) {
+            throw new Exception('Notion Database ID ist nicht konfiguriert', 400);
+        }
+
+        $data = $this->getRequestData();
+
+        // Hole die aktuellen Wochenplan-Daten
+        $weekNumber = $data['week_number'] ?? date('W');
+        $year = $data['year'] ?? date('Y');
+        $userName = $data['user_name'] ?? 'Unbekannt';
+
+        // Hole alle Mahlzeiten für diese Woche
+        $meals = $this->db->fetchAll(
+            "SELECT
+                wp.weekday,
+                wp.meal_type,
+                r.title as recipe_title,
+                r.id as recipe_id
+            FROM week_plan wp
+            LEFT JOIN recipes r ON wp.recipe_id = r.id
+            WHERE wp.week_number = ? AND wp.year = ?
+            ORDER BY
+                FIELD(wp.weekday, 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'),
+                FIELD(wp.meal_type, 'Mittagessen', 'Abendessen')",
+            [$weekNumber, $year]
+        );
+
+        // Hole Zutaten für jedes Rezept
+        foreach ($meals as &$meal) {
+            if ($meal['recipe_id']) {
+                $ingredients = $this->db->fetchAll(
+                    "SELECT ingredient
+                     FROM recipe_ingredients
+                     WHERE recipe_id = ?
+                     ORDER BY id",
+                    [$meal['recipe_id']]
+                );
+                $meal['ingredients'] = array_column($ingredients, 'ingredient');
+            } else {
+                $meal['ingredients'] = [];
+            }
+        }
+
+        // Erstelle Notion Page Data
+        $weekPlanData = [
+            'week_number' => $weekNumber,
+            'year' => $year,
+            'user_name' => $userName,
+            'meals' => $meals
+        ];
+
+        // Notion API initialisieren
+        require_once __DIR__ . '/NotionAPI.php';
+        $notion = new NotionAPI(NOTION_API_TOKEN, NOTION_DATABASE_ID);
+
+        // Erstelle Seite in Notion
+        $result = $notion->createWeekPlanPage($weekPlanData);
+
+        if ($result['success']) {
+            $this->sendJSON([
+                'success' => true,
+                'message' => 'Wochenplan erfolgreich an Notion gesendet',
+                'page_id' => $result['page_id'],
+                'url' => $result['url'],
+                'week_number' => $weekNumber,
+                'year' => $year
+            ]);
+        } else {
+            throw new Exception($result['error'] ?? 'Notion Export fehlgeschlagen', 500);
+        }
+    }
+
     // ==================== HELPER METHODS ====================
     
     private function parseEndpoint() {

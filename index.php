@@ -109,7 +109,14 @@ $menuConfig = [
                             </svg>
                             <span class="hidden sm:inline">Bring!</span>
                         </button>
-                        
+
+                        <button onclick="exportToNotion()" class="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors shadow-md">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span class="hidden sm:inline">Notion</span>
+                        </button>
+
                         <button onclick="showRecipeManagement()" class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-md">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -2020,6 +2027,70 @@ $menuConfig = [
             if (debugConfirm(message)) {
                 // Öffne Bring! Deeplink
                 window.open(bringDeeplink, '_blank');
+            }
+        }
+
+        // ==================== NOTION EXPORT ====================
+
+        async function exportToNotion() {
+            // Prüfe ob ein Benutzer angemeldet ist
+            if (!currentUser) {
+                alert('Bitte melden Sie sich zuerst an!');
+                return;
+            }
+
+            // Prüfe ob Wochenplan Daten vorhanden sind
+            if (!weekPlan || Object.keys(weekPlan).length === 0) {
+                alert('Kein Wochenplan gefunden! Bitte laden Sie zuerst einen Wochenplan.');
+                return;
+            }
+
+            // Zeige Bestätigungsdialog
+            const message = `Möchten Sie den Wochenplan KW ${currentWeek.weekNumber}/${currentWeek.year} an Notion senden?`;
+            if (!debugConfirm(message)) {
+                return;
+            }
+
+            try {
+                // Sende Wochenplan an Notion
+                const result = await apiCall('/export_to_notion', 'POST', {
+                    week_number: currentWeek.weekNumber,
+                    year: currentWeek.year,
+                    user_name: currentUser.name
+                });
+
+                if (result && result.success) {
+                    let successMessage = `✅ Wochenplan erfolgreich an Notion gesendet!\n\nKW ${result.week_number}/${result.year}`;
+
+                    // Wenn eine URL verfügbar ist, zeige einen Link
+                    if (result.url) {
+                        successMessage += '\n\nMöchten Sie die Notion-Seite öffnen?';
+                        if (confirm(successMessage)) {
+                            window.open(result.url, '_blank');
+                        }
+                    } else {
+                        alert(successMessage);
+                    }
+                } else {
+                    throw new Error(result?.error || 'Unbekannter Fehler beim Senden an Notion');
+                }
+            } catch (error) {
+                console.error('Notion Export Fehler:', error);
+
+                // Prüfe ob es ein Konfigurationsfehler ist
+                if (error.message && error.message.includes('konfiguriert')) {
+                    alert('⚠️ Notion ist nicht konfiguriert!\n\n' +
+                          'Bitte tragen Sie in config.php Folgendes ein:\n' +
+                          '1. NOTION_API_TOKEN (Integration Token)\n' +
+                          '2. NOTION_DATABASE_ID (Datenbank ID)\n\n' +
+                          'Anleitung:\n' +
+                          '1. Erstellen Sie eine Integration unter https://www.notion.so/my-integrations\n' +
+                          '2. Kopieren Sie das "Internal Integration Token"\n' +
+                          '3. Teilen Sie Ihre Datenbank mit der Integration\n' +
+                          '4. Kopieren Sie die Database ID aus der Datenbank-URL');
+                } else {
+                    alert('❌ Fehler beim Senden an Notion:\n\n' + error.message);
+                }
             }
         }
     </script>

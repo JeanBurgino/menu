@@ -46,6 +46,34 @@ if (!defined('BRING_DEBUG')) {
     define('BRING_DEBUG', false); // false in Produktion!
 }
 
+// === NOTION API KONFIGURATION ===
+// Trage hier deine Notion API Credentials ein:
+// 1. Erstelle eine Integration unter https://www.notion.so/my-integrations
+// 2. Kopiere das "Internal Integration Token"
+// 3. Teile deine Datenbank mit der Integration
+// 4. Kopiere die Database ID aus der Datenbank-URL
+
+if (!defined('NOTION_API_TOKEN')) {
+    define('NOTION_API_TOKEN', ''); // Dein Notion Integration Token hier eintragen
+}
+if (!defined('NOTION_DATABASE_ID')) {
+    define('NOTION_DATABASE_ID', ''); // Deine Notion Database ID hier eintragen
+}
+
+// Erweiterte Notion Einstellungen
+if (!defined('NOTION_API_URL')) {
+    define('NOTION_API_URL', 'https://api.notion.com/v1');
+}
+if (!defined('NOTION_API_VERSION')) {
+    define('NOTION_API_VERSION', '2022-06-28'); // Notion API Version
+}
+if (!defined('NOTION_API_TIMEOUT')) {
+    define('NOTION_API_TIMEOUT', 30);
+}
+if (!defined('NOTION_DEBUG')) {
+    define('NOTION_DEBUG', false); // false in Produktion!
+}
+
 // === ANWENDUNGS-EINSTELLUNGEN ===
 if (!defined('APP_NAME')) define('APP_NAME', 'Menüplaner');
 if (!defined('APP_VERSION')) define('APP_VERSION', '2.0.0');
