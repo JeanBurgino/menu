@@ -18,58 +18,11 @@ class NotionAPI {
 
     public function __construct($apiToken, $databaseId, $options = []) {
         $this->apiToken = $apiToken;
-        $this->databaseId = $this->normalizeDatabaseId($databaseId);
+        $this->databaseId = $databaseId;
         $this->baseUrl = $options['baseUrl'] ?? (defined('NOTION_API_URL') ? NOTION_API_URL : 'https://api.notion.com/v1');
         $this->apiVersion = $options['apiVersion'] ?? (defined('NOTION_API_VERSION') ? NOTION_API_VERSION : '2022-06-28');
         $this->timeout = $options['timeout'] ?? (defined('NOTION_API_TIMEOUT') ? NOTION_API_TIMEOUT : 30);
         $this->debug = $options['debug'] ?? (defined('NOTION_DEBUG') ? NOTION_DEBUG : false);
-    }
-
-    /**
-     * Normalisiert die Database ID in das richtige UUID-Format
-     * Entfernt Datenbanknamen und formatiert als UUID
-     */
-    private function normalizeDatabaseId($databaseId) {
-        if (empty($databaseId)) {
-            return $databaseId;
-        }
-
-        // Entferne Leerzeichen
-        $databaseId = trim($databaseId);
-
-        // Falls die ID einen Datenbanknamen enthält (z.B. "Essenplaner-2b26f3f4...")
-        // Nehme nur den letzten Teil nach dem letzten Bindestrich
-        if (preg_match('/[^0-9a-f\-]/i', $databaseId)) {
-            // Enthält nicht-hex Zeichen, also wahrscheinlich ein Name
-            $parts = explode('-', $databaseId);
-            // Nimm die letzten 32 Zeichen
-            $lastPart = end($parts);
-            if (strlen($lastPart) === 32 && ctype_xdigit($lastPart)) {
-                $databaseId = $lastPart;
-            }
-        }
-
-        // Entferne alle Bindestriche
-        $clean = str_replace('-', '', $databaseId);
-
-        // Prüfe ob es eine gültige 32-Zeichen Hex-ID ist
-        if (strlen($clean) === 32 && ctype_xdigit($clean)) {
-            // Formatiere als UUID: 8-4-4-4-12
-            return substr($clean, 0, 8) . '-' .
-                   substr($clean, 8, 4) . '-' .
-                   substr($clean, 12, 4) . '-' .
-                   substr($clean, 16, 4) . '-' .
-                   substr($clean, 20, 12);
-        }
-
-        // Falls bereits im UUID-Format, gib es zurück
-        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $databaseId)) {
-            return $databaseId;
-        }
-
-        // Falls nichts passt, gib Original zurück und logge Warnung
-        $this->log('Database ID konnte nicht normalisiert werden: ' . $databaseId, 'WARNING');
-        return $databaseId;
     }
 
     public function getLastError() {
