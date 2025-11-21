@@ -670,13 +670,20 @@ class MenuPlannerAPI {
         foreach ($meals as &$meal) {
             if ($meal['recipe_id']) {
                 $ingredients = $this->db->fetchAll(
-                    "SELECT ingredient
+                    "SELECT name, specification
                      FROM recipe_ingredients
                      WHERE recipe_id = ?
-                     ORDER BY id",
+                     ORDER BY position, id",
                     [$meal['recipe_id']]
                 );
-                $meal['ingredients'] = array_column($ingredients, 'ingredient');
+
+                // Kombiniere Name und Spezifikation zu einem String
+                $meal['ingredients'] = array_map(function($ing) {
+                    if (!empty($ing['specification'])) {
+                        return $ing['name'] . ' (' . $ing['specification'] . ')';
+                    }
+                    return $ing['name'];
+                }, $ingredients);
             } else {
                 $meal['ingredients'] = [];
             }

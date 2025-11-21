@@ -563,7 +563,7 @@ $menuConfig = [
 
         // ==================== API CALLS ====================
 
-        async function apiCall(endpoint, method = 'GET', data = null) {
+        async function apiCall(endpoint, method = 'GET', data = null, throwErrors = false) {
             const options = {
                 method: method,
                 headers: {
@@ -578,32 +578,52 @@ $menuConfig = [
             try {
                 // Entferne führenden Slash und extrahiere action und Parameter
                 endpoint = endpoint.replace(/^\//, '');
-                
+
                 // Trenne action und Query-Parameter
                 const [action, params] = endpoint.split('?');
                 const baseAction = action.replace(/\//g, '_');
-                
+
                 // Baue URL zusammen
                 let url = `api.php?action=${baseAction}`;
                 if (params) {
                     url += `&${params}`;
                 }
-                
+
                 const response = await fetch(url, options);
-                
+
                 // Prüfe ob Response OK ist
                 if (!response.ok) {
                     const text = await response.text();
                     console.error('Server Response:', text);
-                    throw new Error(`HTTP error! status: ${response.status}`);
+
+                    // Versuche JSON-Fehler zu parsen
+                    let errorMessage;
+                    try {
+                        const errorData = JSON.parse(text);
+                        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+                    } catch (parseError) {
+                        // Falls kein JSON, verwende Text
+                        errorMessage = text || `HTTP error! status: ${response.status}`;
+                    }
+
+                    if (throwErrors) {
+                        throw new Error(errorMessage);
+                    } else {
+                        alert('Fehler bei der Kommunikation mit dem Server: ' + errorMessage);
+                        return null;
+                    }
                 }
-                
+
                 const result = await response.json();
                 return result;
             } catch (error) {
                 console.error('API-Fehler:', error);
-                alert('Fehler bei der Kommunikation mit dem Server: ' + error.message);
-                return null;
+                if (throwErrors) {
+                    throw error;
+                } else {
+                    alert('Fehler bei der Kommunikation mit dem Server: ' + error.message);
+                    return null;
+                }
             }
         }
 
@@ -2057,7 +2077,7 @@ $menuConfig = [
                     week_number: currentWeek.weekNumber,
                     year: currentWeek.year,
                     user_name: currentUser.name
-                });
+                }, true); // throwErrors = true für detailliertes Error-Handling
 
                 if (result && result.success) {
                     let successMessage = `✅ Wochenplan erfolgreich an Notion gesendet!\n\nKW ${result.week_number}/${result.year}`;
