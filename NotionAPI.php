@@ -205,7 +205,7 @@ class NotionAPI {
             ],
             'properties' => [
                 'Name' => [
-                    'title' => [
+                    'rich_text' => [
                         [
                             'text' => [
                                 'content' => $title
@@ -214,10 +214,22 @@ class NotionAPI {
                     ]
                 ],
                 'Woche' => [
-                    'number' => (int)$weekNumber
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => (string)$weekNumber
+                            ]
+                        ]
+                    ]
                 ],
                 'Jahr' => [
-                    'number' => (int)$year
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => (string)$year
+                            ]
+                        ]
+                    ]
                 ],
                 'Benutzer' => [
                     'rich_text' => [
