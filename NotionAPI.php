@@ -77,7 +77,7 @@ class NotionAPI {
     }
 
     /**
-     * Baut die Page-Daten für Notion auf
+     * Baut die Page-Daten für Notion auf TEST
      */
     private function buildPageData($weekPlanData) {
         $weekNumber = $weekPlanData['week_number'] ?? date('W');
