@@ -23,6 +23,9 @@ class NotionAPI {
         $this->apiVersion = $options['apiVersion'] ?? (defined('NOTION_API_VERSION') ? NOTION_API_VERSION : '2022-06-28');
         $this->timeout = $options['timeout'] ?? (defined('NOTION_API_TIMEOUT') ? NOTION_API_TIMEOUT : 30);
         $this->debug = $options['debug'] ?? (defined('NOTION_DEBUG') ? NOTION_DEBUG : false);
+
+        // Debug: Logge die Database ID (immer als ERROR um sicherzustellen dass es geloggt wird)
+        $this->log('NotionAPI initialisiert mit Database ID: [' . $this->databaseId . '] (Länge: ' . strlen($this->databaseId) . ')', 'ERROR');
     }
 
     public function getLastError() {
@@ -55,6 +58,10 @@ class NotionAPI {
         // Erstelle den Page-Inhalt
         $pageData = $this->buildPageData($weekPlanData);
 
+        // Debug: Logge die verwendete Database ID
+        $dbIdUsed = $pageData['parent']['database_id'] ?? 'UNDEFINED';
+        $this->log('Sende an Notion mit Database ID: [' . $dbIdUsed . '] (Länge: ' . strlen($dbIdUsed) . ')', 'ERROR');
+
         $response = $this->request('POST', $url, json_encode($pageData), $this->getAuthHeaders());
 
         if ($response['success']) {
@@ -67,6 +74,7 @@ class NotionAPI {
         }
 
         $errorMsg = 'Notion API Fehler: ' . ($response['error'] ?? 'Unknown error');
+        $errorMsg .= ' | Database ID verwendet: [' . $this->databaseId . '] (Länge: ' . strlen($this->databaseId) . ')';
         $this->log($errorMsg, 'ERROR');
         $this->lastError = $errorMsg;
         return [
