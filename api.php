@@ -656,9 +656,11 @@ class MenuPlannerAPI {
                 wp.weekday,
                 wp.meal_type,
                 r.title as recipe_title,
-                r.id as recipe_id
+                r.id as recipe_id,
+                u.name as modified_by_name
             FROM week_plan wp
             LEFT JOIN recipes r ON wp.recipe_id = r.id
+            LEFT JOIN users u ON wp.last_modified_by = u.id
             WHERE wp.week_number = ? AND wp.year = ?
             ORDER BY
                 FIELD(wp.weekday, 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'),
@@ -708,8 +710,8 @@ class MenuPlannerAPI {
             $this->sendJSON([
                 'success' => true,
                 'message' => 'Wochenplan erfolgreich an Notion gesendet',
-                'page_id' => $result['page_id'],
-                'url' => $result['url'],
+                'total_entries' => $result['total'] ?? count($result['created_pages']),
+                'created_pages' => $result['created_pages'],
                 'week_number' => $weekNumber,
                 'year' => $year
             ]);

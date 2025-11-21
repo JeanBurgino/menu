@@ -33,13 +33,14 @@ class NotionAPI {
     }
 
     /**
-     * Erstellt eine neue Seite in der Notion Datenbank
+     * Erstellt Einträge in der Notion Datenbank für den Wochenplan
+     * Erstellt einen Eintrag pro Wochentag
      *
      * @param array $weekPlanData Array mit Wochenplan-Daten
      * @return array Success/Error Information
      */
     public function createWeekPlanPage($weekPlanData) {
-        $this->log('=== CREATE NOTION PAGE START ===');
+        $this->log('=== CREATE NOTION PAGES START ===');
 
         if (empty($this->apiToken)) {
             $this->lastError = 'Notion API Token ist nicht konfiguriert';
@@ -53,41 +54,161 @@ class NotionAPI {
             return ['success' => false, 'error' => $this->lastError];
         }
 
+        $weekNumber = $weekPlanData['week_number'] ?? date('W');
+        $year = $weekPlanData['year'] ?? date('Y');
+        $userName = $weekPlanData['user_name'] ?? 'Unbekannt';
+        $meals = $weekPlanData['meals'] ?? [];
+
         $url = $this->baseUrl . '/pages';
+        $weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
-        // Erstelle den Page-Inhalt
-        $pageData = $this->buildPageData($weekPlanData);
+        $createdPages = [];
+        $errors = [];
 
-        // Debug: Logge die verwendete Database ID
-        $dbIdUsed = $pageData['parent']['database_id'] ?? 'UNDEFINED';
-        $this->log('Sende an Notion mit Database ID: [' . $dbIdUsed . '] (Länge: ' . strlen($dbIdUsed) . ')', 'ERROR');
+        // Erstelle einen Eintrag pro Wochentag
+        foreach ($weekdays as $weekday) {
+            // Finde Mahlzeiten für diesen Tag
+            $mittagessen = '';
+            $abendessen = '';
+            $benutzer = $userName;
 
-        $response = $this->request('POST', $url, json_encode($pageData), $this->getAuthHeaders());
+            foreach ($meals as $meal) {
+                if (($meal['weekday'] ?? '') === $weekday) {
+                    if (($meal['meal_type'] ?? '') === 'Mittagessen') {
+                        $mittagessen = $meal['recipe_title'] ?? '';
+                        if (!empty($meal['modified_by_name'])) {
+                            $benutzer = $meal['modified_by_name'];
+                        }
+                    } elseif (($meal['meal_type'] ?? '') === 'Abendessen') {
+                        $abendessen = $meal['recipe_title'] ?? '';
+                        if (!empty($meal['modified_by_name'])) {
+                            $benutzer = $meal['modified_by_name'];
+                        }
+                    }
+                }
+            }
 
-        if ($response['success']) {
-            $this->log('✅ Notion Seite erfolgreich erstellt');
+            // Erstelle Page-Daten für diesen Tag
+            $pageData = $this->buildPageDataForDay($weekday, $mittagessen, $abendessen, $benutzer, $weekNumber, $year);
+
+            $this->log("Erstelle Eintrag für {$weekday}");
+
+            $response = $this->request('POST', $url, json_encode($pageData), $this->getAuthHeaders());
+
+            if ($response['success']) {
+                $createdPages[] = [
+                    'weekday' => $weekday,
+                    'page_id' => $response['data']['id'] ?? null,
+                    'url' => $response['data']['url'] ?? null
+                ];
+                $this->log("✅ {$weekday} erstellt");
+            } else {
+                $errorMsg = "Fehler bei {$weekday}: " . ($response['error'] ?? 'Unknown error');
+                $errors[] = $errorMsg;
+                $this->log($errorMsg, 'ERROR');
+            }
+        }
+
+        if (count($errors) > 0) {
+            $this->lastError = implode('; ', $errors);
             return [
-                'success' => true,
-                'page_id' => $response['data']['id'] ?? null,
-                'url' => $response['data']['url'] ?? null
+                'success' => false,
+                'error' => $this->lastError,
+                'created_pages' => $createdPages
             ];
         }
 
-        $errorMsg = 'Notion API Fehler: ' . ($response['error'] ?? 'Unknown error');
-        $errorMsg .= ' | Database ID verwendet: [' . $this->databaseId . '] (Länge: ' . strlen($this->databaseId) . ')';
-        $this->log($errorMsg, 'ERROR');
-        $this->lastError = $errorMsg;
+        $this->log('✅ Alle Einträge erfolgreich erstellt');
         return [
-            'success' => false,
-            'error' => $this->lastError,
-            'http_code' => $response['http_code'] ?? null
+            'success' => true,
+            'created_pages' => $createdPages,
+            'total' => count($createdPages)
         ];
     }
 
     /**
-     * Baut die Page-Daten für Notion auf
+     * Baut die Page-Daten für einen einzelnen Tag auf
      */
-    private function buildPageData($weekPlanData) {
+    private function buildPageDataForDay($weekday, $mittagessen, $abendessen, $benutzer, $weekNumber, $year) {
+        // Erstelle einen Namen für die Seite
+        $name = "KW {$weekNumber}/{$year} - {$weekday}";
+
+        return [
+            'parent' => [
+                'database_id' => $this->databaseId
+            ],
+            'properties' => [
+                'Name' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => $name
+                            ]
+                        ]
+                    ]
+                ],
+                'Wochentag' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => $weekday
+                            ]
+                        ]
+                    ]
+                ],
+                'Mittagessen' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => $mittagessen ?: '-'
+                            ]
+                        ]
+                    ]
+                ],
+                'Abendessen' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => $abendessen ?: '-'
+                            ]
+                        ]
+                    ]
+                ],
+                'Benutzer' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => $benutzer
+                            ]
+                        ]
+                    ]
+                ],
+                'Woche' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => (string)$weekNumber
+                            ]
+                        ]
+                    ]
+                ],
+                'Jahr' => [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => (string)$year
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+    /**
+     * Baut die Page-Daten für Notion auf (alte Methode, nicht mehr verwendet)
+     */
+    private function buildPageData_OLD($weekPlanData) {
         $weekNumber = $weekPlanData['week_number'] ?? date('W');
         $year = $weekPlanData['year'] ?? date('Y');
         $userName = $weekPlanData['user_name'] ?? 'Unbekannt';

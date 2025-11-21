@@ -2080,13 +2080,19 @@ $menuConfig = [
                 }, true); // throwErrors = true für detailliertes Error-Handling
 
                 if (result && result.success) {
-                    let successMessage = `✅ Wochenplan erfolgreich an Notion gesendet!\n\nKW ${result.week_number}/${result.year}`;
+                    const totalEntries = result.total_entries || 0;
+                    let successMessage = `✅ Wochenplan erfolgreich an Notion gesendet!\n\nKW ${result.week_number}/${result.year}\n${totalEntries} Einträge erstellt`;
 
-                    // Wenn eine URL verfügbar ist, zeige einen Link
-                    if (result.url) {
-                        successMessage += '\n\nMöchten Sie die Notion-Seite öffnen?';
-                        if (confirm(successMessage)) {
-                            window.open(result.url, '_blank');
+                    // Wenn URLs verfügbar sind, zeige Option zum Öffnen
+                    if (result.created_pages && result.created_pages.length > 0) {
+                        const firstPage = result.created_pages[0];
+                        if (firstPage.url) {
+                            successMessage += '\n\nMöchten Sie die Notion-Datenbank öffnen?';
+                            if (confirm(successMessage)) {
+                                window.open(firstPage.url, '_blank');
+                            }
+                        } else {
+                            alert(successMessage);
                         }
                     } else {
                         alert(successMessage);
