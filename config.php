@@ -54,10 +54,10 @@ if (!defined('BRING_DEBUG')) {
 // 4. Kopiere die Database ID aus der Datenbank-URL
 
 if (!defined('NOTION_API_TOKEN')) {
-    define('NOTION_API_TOKEN', ''); // Dein Notion Integration Token hier eintragen
+    define('NOTION_API_TOKEN', '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'); // Dein Notion Integration Token hier eintragen
 }
 if (!defined('NOTION_DATABASE_ID')) {
-    define('NOTION_DATABASE_ID', ''); // Deine Notion Database ID hier eintragen
+    define('NOTION_DATABASE_ID', '2b26f3f4f91680bfabd4f99a1aacee4d'); // Deine Notion Database ID hier eintragen
 }
 
 // Erweiterte Notion Einstellungen
