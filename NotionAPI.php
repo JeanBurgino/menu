@@ -60,7 +60,7 @@ class NotionAPI {
         $meals = $weekPlanData['meals'] ?? [];
 
         $url = $this->baseUrl . '/pages';
-        $weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+        $weekdays = ['Sonntag', 'Samstag', 'Freitag', 'Donnerstag', 'Mittwoch', 'Dienstag', 'Montag'];
 
         $createdPages = [];
         $errors = [];
@@ -74,13 +74,19 @@ class NotionAPI {
 
             foreach ($meals as $meal) {
                 if (($meal['weekday'] ?? '') === $weekday) {
-                    if (($meal['meal_type'] ?? '') === 'Mittagessen') {
-                        $mittagessen = $meal['recipe_title'] ?? '';
+                    $mealType = $meal['meal_type'] ?? '';
+                    $recipeTitle = $meal['recipe_title'] ?? '';
+
+                    // Debug: Logge die Mahlzeit
+                    $this->log("{$weekday}: meal_type='{$mealType}', recipe='{$recipeTitle}'", 'ERROR');
+
+                    if ($mealType === 'Mittagessen' || $mealType === 'Mittag') {
+                        $mittagessen = $recipeTitle;
                         if (!empty($meal['modified_by_name'])) {
                             $benutzer = $meal['modified_by_name'];
                         }
-                    } elseif (($meal['meal_type'] ?? '') === 'Abendessen') {
-                        $abendessen = $meal['recipe_title'] ?? '';
+                    } elseif ($mealType === 'Abendessen' || $mealType === 'Abend') {
+                        $abendessen = $recipeTitle;
                         if (!empty($meal['modified_by_name'])) {
                             $benutzer = $meal['modified_by_name'];
                         }
@@ -130,8 +136,8 @@ class NotionAPI {
      * Baut die Page-Daten für einen einzelnen Tag auf
      */
     private function buildPageDataForDay($weekday, $mittagessen, $abendessen, $benutzer, $weekNumber, $year) {
-        // Erstelle einen Namen für die Seite
-        $name = "KW {$weekNumber}/{$year} - {$weekday}";
+        // Erstelle einen Namen für die Seite (ohne Wochentag)
+        $name = "KW {$weekNumber}/{$year}";
 
         return [
             'parent' => [
